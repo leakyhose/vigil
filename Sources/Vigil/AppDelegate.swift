@@ -19,14 +19,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         get { Mode(rawValue: defaults.string(forKey: "mode") ?? "") ?? .off }
         set {
             defaults.set(newValue.rawValue, forKey: "mode")
-            if newValue != .off { defaults.set(newValue.rawValue, forKey: "lastOnMode") }
             Log.write("mode: \(newValue.rawValue)")
             tick()
         }
-    }
-
-    private var lastOnMode: Mode {
-        Mode(rawValue: defaults.string(forKey: "lastOnMode") ?? "") ?? .agents
     }
 
     private var stopOnLowBattery: Bool {
@@ -149,9 +144,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
-        let toggle = item(mode == .off ? "Turn On" : "Turn Off", #selector(toggleOnOff))
-        toggle.keyEquivalent = "t"
-        menu.addItem(toggle)
         menu.addItem(modeItem("Keep Awake While Agents Work", .agents))
         menu.addItem(modeItem("Keep Awake Always", .always))
 
@@ -209,10 +201,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // MARK: - Actions
 
-    @objc private func toggleOnOff() {
-        mode = mode == .off ? lastOnMode : .off
-    }
-
+    /// Choosing the checked mode again turns Vigil off.
     @objc private func selectMode(_ sender: NSMenuItem) {
         guard let value = (sender.representedObject as? String).flatMap(Mode.init) else { return }
         mode = mode == value ? .off : value

@@ -11,14 +11,19 @@ Requires macOS 13+.
 
 ## Use
 
-Click the menu bar icon and choose **Turn On**.
+Click the menu bar icon and choose a mode. Choose the checked one again to turn Vigil off.
+
+- **Keep Awake While Agents Work**: awake while agents are running or waiting on a limit reset
+- **Keep Awake Always**: awake until you turn it off
+
+The icon shows what it's doing:
 
 - **Dim moon**: off
 - **Outline cup**: on, nothing running
 - **Orange cup + number**: keeping the Mac awake
 - **Red battery**: paused at 10% battery
 
-**Keep Awake Always** ignores agent activity. To keep the Mac awake with the lid closed, choose **Settings → Enable Lid-Closed Support…** and enter your password once.
+To keep the Mac awake with the lid closed, choose **Settings → Enable Lid-Closed Support…** and enter your password once.
 
 Logs are in `~/Library/Logs/Vigil.log`.
 
