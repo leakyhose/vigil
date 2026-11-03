@@ -15,6 +15,9 @@ public final class PowerController {
     private let flagFile: URL
     private let log: (String) -> Void
     public private(set) var holding = false
+    /// Whether the lid-closed sudoers rule is installed. Checked by the caller, since
+    /// probing sudo on every tick would be wasteful.
+    public var lidSupport = false
 
     public init(paths: Paths, log: @escaping (String) -> Void = { _ in }) {
         self.flagFile = paths.supportDirectory.appendingPathComponent("lid-hold")
@@ -38,7 +41,7 @@ public final class PowerController {
                 }
             }
         }
-        if !FileManager.default.fileExists(atPath: flagFile.path), LidSupport.isEnabled, setSleepDisabled(true) {
+        if !FileManager.default.fileExists(atPath: flagFile.path), lidSupport, setSleepDisabled(true) {
             try? FileManager.default.createDirectory(at: flagFile.deletingLastPathComponent(), withIntermediateDirectories: true)
             FileManager.default.createFile(atPath: flagFile.path, contents: nil)
             log("lid-closed sleep disabled")
