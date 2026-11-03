@@ -12,6 +12,9 @@ final class T3MonitorTests: XCTestCase {
               thread_id text primary key, title text, archived_at text, deleted_at text, payload_json text);
             create table orchestration_v2_projection_runs (
               run_id text primary key, thread_id text, status text, requested_at text);
+            create table orchestration_v2_projection_subagents (
+              subagent_id text primary key, thread_id text, child_thread_id text, status text,
+              started_at text, updated_at text);
             """)
     }
 
@@ -68,6 +71,29 @@ final class T3MonitorTests: XCTestCase {
         let activity = T3Monitor(databasePath: dbPath).activity(now: now)
         XCTAssertEqual(activity.running, ["Resumed"])
         XCTAssertEqual(activity.limitWaits, [])
+    }
+
+    func addSubagent(parent: String, child: String?, status: String, started: String, updated: String) throws {
+        let childValue = child.map { "'\($0)'" } ?? "null"
+        try sqlite(dbPath, "insert into orchestration_v2_projection_subagents values ('\(UUID())', '\(parent)', \(childValue), '\(status)', '\(started)', '\(updated)')")
+    }
+
+    func testBackgroundSubagentsCountAfterParentTurnCompletes() throws {
+        try addThread("main", "Main thread")
+        try addThread("child", "Subagent work")
+        try addThread("old", "Old parent")
+        try addRun("main", status: "completed", requestedAt: "2026-11-02T19:00:00.000Z")
+        try addSubagent(parent: "main", child: "child", status: "running",
+                        started: "2026-11-02T19:00:00.000Z", updated: "2026-11-02T20:59:00.000Z")
+        try addSubagent(parent: "main", child: nil, status: "running",
+                        started: "2026-11-02T19:00:00.000Z", updated: "2026-11-02T20:30:00.000Z")
+        try addSubagent(parent: "main", child: "child", status: "completed",
+                        started: "2026-11-02T19:00:00.000Z", updated: "2026-11-02T20:59:00.000Z")
+        // Went quiet hours ago: left over from a crash.
+        try addSubagent(parent: "old", child: nil, status: "running",
+                        started: "2026-11-02T12:00:00.000Z", updated: "2026-11-02T13:00:00.000Z")
+        let activity = T3Monitor(databasePath: dbPath).activity(now: now)
+        XCTAssertEqual(activity.running, ["Subagent work", "Main thread"])
     }
 
     func testUnexpectedSchemaFailsSoft() throws {

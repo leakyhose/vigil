@@ -12,7 +12,7 @@ public struct LimitWait: Equatable {
 }
 
 public struct T3Activity: Equatable {
-    /// Titles of threads with a turn in progress (any provider).
+    /// Titles of threads with a turn or background subagent in progress (any provider).
     public var running: [String] = []
     /// Threads waiting for a limit reset, soonest first.
     public var limitWaits: [LimitWait] = []
@@ -32,6 +32,8 @@ public struct T3Monitor {
     public var databasePath: String
     /// Ignore runs marked running for longer than this; they are left over from a crash.
     public var staleRunAge: TimeInterval = 24 * 3600
+    /// Ignore subagents marked running that haven't reported anything for this long.
+    public var staleSubagentQuiet: TimeInterval = 2 * 3600
     /// Keep counting a limit wait this long past its reset, so the resumed turn can start.
     public var resetGrace: TimeInterval = 10 * 60
     /// Ignore limit waits whose reset is further away than this (e.g. weekly limits).
@@ -57,6 +59,22 @@ public struct T3Monitor {
                   now.timeIntervalSince(requested) < staleRunAge else { continue }
             activity.running.append(title)
             runningThreads.insert(row[2] ?? "")
+        }
+
+        // Background subagents keep working after the parent's turn has completed.
+        let subagents = db.rows("""
+            select coalesce(c.title, p.title), s.started_at, s.updated_at
+            from orchestration_v2_projection_subagents s
+            join orchestration_v2_projection_threads p on p.thread_id = s.thread_id
+            left join orchestration_v2_projection_threads c on c.thread_id = s.child_thread_id
+            where s.status = 'running' and p.archived_at is null and p.deleted_at is null
+            """) ?? []
+        for row in subagents {
+            guard let title = row[0], let started = row[1].flatMap(parseDate),
+                  let updated = row[2].flatMap(parseDate),
+                  now.timeIntervalSince(started) < staleRunAge,
+                  now.timeIntervalSince(updated) < staleSubagentQuiet else { continue }
+            activity.running.append(title)
         }
 
         let limited = db.rows("""
