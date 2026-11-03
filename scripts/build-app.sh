@@ -20,7 +20,7 @@ mkdir -p $app/Contents/MacOS $app/Contents/Resources
 cp $bin $app/Contents/MacOS/Vigil
 cp Resources/AppIcon.icns $app/Contents/Resources/
 sed "s/VERSION/$version/g" Resources/Info.plist > $app/Contents/Info.plist
-codesign --force --sign - --options runtime $app
+codesign --force --sign - $app
 
 ditto -c -k --keepParent $app dist/Vigil-$version.zip
 echo "Built $app ($version): $(lipo -archs $app/Contents/MacOS/Vigil)"
