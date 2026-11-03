@@ -62,6 +62,14 @@ final class T3MonitorTests: XCTestCase {
         XCTAssertEqual(waits.map(\.title), ["Just reset", "Resets sooner", "Resets soon"])
     }
 
+    func testResumedThreadCountsOnlyAsRunning() throws {
+        try addThread("a", "Resumed", payload: limit("2026-11-02T20:58:00.000Z"))
+        try addRun("a", status: "running", requestedAt: "2026-11-02T20:58:30.000Z")
+        let activity = T3Monitor(databasePath: dbPath).activity(now: now)
+        XCTAssertEqual(activity.running, ["Resumed"])
+        XCTAssertEqual(activity.limitWaits, [])
+    }
+
     func testUnexpectedSchemaFailsSoft() throws {
         try sqlite(dbPath, "drop table orchestration_v2_projection_runs")
         try addThread("a", "Resets soon", payload: limit("2026-11-02T22:10:00.000Z"))

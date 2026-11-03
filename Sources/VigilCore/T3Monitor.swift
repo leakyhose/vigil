@@ -46,19 +46,21 @@ public struct T3Monitor {
         var activity = T3Activity(available: true)
 
         let runs = db.rows("""
-            select t.title, r.requested_at
+            select t.title, r.requested_at, t.thread_id
             from orchestration_v2_projection_runs r
             join orchestration_v2_projection_threads t using (thread_id)
             where r.status = 'running' and t.archived_at is null and t.deleted_at is null
             """) ?? []
+        var runningThreads = Set<String>()
         for row in runs {
             guard let title = row[0], let requested = row[1].flatMap(parseDate),
                   now.timeIntervalSince(requested) < staleRunAge else { continue }
             activity.running.append(title)
+            runningThreads.insert(row[2] ?? "")
         }
 
         let limited = db.rows("""
-            select title,
+            select title, thread_id,
                    json_extract(payload_json, '$.limitRecovery.resetAt'),
                    json_extract(payload_json, '$.limitRecovery.autoResume')
             from orchestration_v2_projection_threads
@@ -66,7 +68,9 @@ public struct T3Monitor {
               and json_extract(payload_json, '$.limitRecovery') is not null
             """) ?? []
         for row in limited {
-            guard let title = row[0], let resetAt = row[1].flatMap(parseDate), row[2] == "1" else { continue }
+            // A thread that has already resumed is counted as running instead.
+            guard let title = row[0], !runningThreads.contains(row[1] ?? ""),
+                  let resetAt = row[2].flatMap(parseDate), row[3] == "1" else { continue }
             let untilReset = resetAt.timeIntervalSince(now)
             if untilReset > -resetGrace && untilReset < maxWaitAhead {
                 activity.limitWaits.append(LimitWait(title: title, resetAt: resetAt))
