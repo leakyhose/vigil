@@ -16,14 +16,18 @@ func render(_ px: Int) -> Data {
     let inset = s * 0.1
     let rect = NSRect(x: inset, y: inset, width: s - 2 * inset, height: s - 2 * inset)
     let path = NSBezierPath(roundedRect: rect, xRadius: rect.width * 0.225, yRadius: rect.width * 0.225)
-    NSGradient(colors: [NSColor(red: 0.13, green: 0.12, blue: 0.27, alpha: 1),
-                        NSColor(red: 0.30, green: 0.17, blue: 0.42, alpha: 1)])!.draw(in: path, angle: 90)
-    let config = NSImage.SymbolConfiguration(pointSize: s * 0.42, weight: .semibold)
-        .applying(.init(paletteColors: [NSColor(red: 1, green: 0.62, blue: 0.2, alpha: 1)]))
+    // Graphite: near-black with a soft top highlight, like the system utilities.
+    NSGradient(colors: [NSColor(srgbRed: 0.110, green: 0.110, blue: 0.118, alpha: 1),
+                        NSColor(srgbRed: 0.173, green: 0.173, blue: 0.180, alpha: 1)])!.draw(in: path, angle: 90)
+    NSColor(white: 0, alpha: 0.12).setStroke()
+    path.lineWidth = s * 0.003
+    path.stroke()
+    let config = NSImage.SymbolConfiguration(pointSize: s * 0.36, weight: .medium)
+        .applying(.init(paletteColors: [NSColor(srgbRed: 0.961, green: 0.961, blue: 0.969, alpha: 1)]))
     if let symbol = NSImage(systemSymbolName: "cup.and.saucer.fill", accessibilityDescription: nil)?
         .withSymbolConfiguration(config) {
         let size = symbol.size
-        symbol.draw(in: NSRect(x: (s - size.width) / 2, y: (s - size.height) / 2 - s * 0.02,
+        symbol.draw(in: NSRect(x: (s - size.width) / 2, y: (s - size.height) / 2,
                                width: size.width, height: size.height))
     }
     NSGraphicsContext.restoreGraphicsState()
